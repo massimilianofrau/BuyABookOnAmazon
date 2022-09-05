@@ -1,0 +1,24 @@
+{
+  "name": "buyabookonamazon",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/massimilianofrau/BuyABookOnAmazon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/massimilianofrau/BuyABookOnAmazon/issues"
+  },
+  "homepage": "https://github.com/massimilianofrau/BuyABookOnAmazon#readme",
+  "dependencies": {
+    "playwright": "^1.25.1",
+    "prompt": "^1.3.0"
+  }
+}
