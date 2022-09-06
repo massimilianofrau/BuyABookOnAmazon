@@ -11,9 +11,9 @@ async function fetchGenres() {
   const page = await browser.newPage();
   await page.goto("https://www.goodreads.com/choiceawards/best-books-2020");
 
-  genres = await page.$$eval("div.category", (all_genres) => {
+  genres = await page.$$eval("div.category", (allGenres) => {
     const data = [];
-    all_genres.forEach((genre) => {
+    allGenres.forEach((genre) => {
       const name = genre.querySelector(".category__copy").innerText;
       const url = genre.querySelector("a").href;
       data.push({ name, url });
@@ -30,6 +30,8 @@ function askGenre() {
   const properties = [
     {
       name: 'genre',
+      type: 'number',
+      message: 'Please entere the genre number',
       conform: function (value) {
         value = Number(value);
         return Number.isInteger(value) && value > 0 && value <= genres.length;
@@ -49,16 +51,12 @@ function askGenre() {
   
   prompt.get(properties, function (err, result) {
     if (err) {
-      return onErr(err);
+      console.log(err);
+      return;
     }
     console.log(`You choosed '${genres[result.genre - 1].name}'`);
     randomBook(genres[result.genre - 1].url)
   });
-  
-  function onErr(err) {
-    console.log(err);
-    return 1;
-  }
 }
 
 async function randomBook(url) {
@@ -71,9 +69,9 @@ async function randomBook(url) {
   
   const books = await page.$$eval(
     "div.inlineblock.pollAnswer.resultShown",
-    (all_books) => {
+    (allBooks) => {
       const data = [];
-      all_books.forEach((book) => {
+      allBooks.forEach((book) => {
         const name = book.querySelector("img").alt;
         data.push(name);
       });
@@ -110,3 +108,11 @@ async function addBookToAmazonChart(book) {
 }
 
 fetchGenres();
+
+/*try {
+  await page.locator('.foo').waitFor();
+} catch (e) {
+  if (e instanceof playwright.errors.TimeoutError) {
+    // Do something if this is a timeout.
+  }
+}*/
