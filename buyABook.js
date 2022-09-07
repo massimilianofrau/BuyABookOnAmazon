@@ -1,104 +1,162 @@
 const playwright = require("playwright");
 const prompts    = require('prompts');
 
-let genres = [];
-let books = [];
+/** Class to add to amazon cart a random book choosing favourite book genre. */
+class BuyABook {
+  constructor() {
+    this.genres           = [];
+    this.books            = [];
+    this.selectedGenreUrl = '';
+    this.randomBookIndex  = null;
 
-async function fetchGenres() {
-  console.log("> Fetching genres...")
-  const browser = await playwright.chromium.launch({
-    headless: true,
-  });
+    this._fetchGenres();
+  }
 
-  const page = await browser.newPage();
-  await page.goto("https://www.goodreads.com/choiceawards/best-books-2020");
+  /** Fetch of all book genres. */
+  async _fetchGenres() {
+    console.log("> Fetching book genres from https://www.goodreads.com/choiceawards/best-books-2020...");
 
-  genres = await page.$$eval("div.category", (allGenres) => {
-    const data = [];
-    allGenres.forEach((genre) => {
-      const title = genre.querySelector(".category__copy").innerText;
-      const value = genre.querySelector("a").href;
-      data.push({title, value});
+    const browser = await playwright.chromium.launch({
+      headless: true,
     });
-    return data;
-  });
 
-  await browser.close();
+    const page = await browser.newPage();
 
-  askGenre();
-}
-
-async function askGenre() {
-  const questions = [
-    {
-      type   : 'select',
-      name   : 'genre',
-      message: 'Please choose your favourite genre',
-      choices: genres,
-      initial: 0
+    try {
+      await page.goto("https://www.goodreads.com/choiceawards/best-books-2020");
+    } catch (e) {
+      if (e instanceof playwright.errors.TimeoutError) {
+      }
+      console.error(`Error: ${e}`)
+      await browser.close();
+      return;
     }
-  ];
 
-  const response = await prompts(questions);
-
-  randomBook(response.genre)
-}
-
-async function randomBook(url) {
-  console.log("> Fetching books...")
-  
-  const browser = await playwright.chromium.launch({
-    headless: true,
-  });
-
-  const page = await browser.newPage();
-  await page.goto(url);
-
-  books = await page.$$eval(
-    "div.inlineblock.pollAnswer.resultShown",
-    (allBooks) => {
+    this.genres = await page.$$eval("div.category", (allGenres) => {
       const data = [];
-      allBooks.forEach((book) => {
-        const name = book.querySelector("img").alt;
-        data.push(name);
+      allGenres.forEach((genre) => {
+        const title = genre.querySelector(".category__copy").innerText;
+        const value = genre.querySelector("a").href;
+        data.push({title, value});
       });
       return data;
-    }
-  );
+    });
 
-  const randomBookIndex = Math.floor(Math.random() * books.length);
-  console.log(`I think you will enjoy the following book: ${books[randomBookIndex]}`);
+    await browser.close();
 
-  await browser.close();
-
-  addBookToAmazonChart(books[randomBookIndex]);
-}
-
-async function addBookToAmazonChart(book) {
-  const browser = await playwright.chromium.launch({
-    headless: false,
-  });
-
-  const page = await browser.newPage();
-  await page.goto("https://amazon.com/");
-  await page.locator('#searchDropdownBox').selectOption({label: 'Books'});
-  //await page.waitForTimeout(1000);
-  await page.locator('#twotabsearchtextbox').fill(book);
-  await page.locator('#nav-search-submit-button').click();
-  await page.locator('s-product-image-container a').click();
-  await page.locator('#add-to-cart-button').click();
-  await page.locator('#nav-cart').click();
-
-
-  //await browser.close();
-}
-
-fetchGenres();
-
-/*try {
-  await page.locator('.foo').waitFor();
-} catch (e) {
-  if (e instanceof playwright.errors.TimeoutError) {
-    // Do something if this is a timeout.
+    this._askGenre();
   }
-}*/
+
+  /** Dialog with prompt to let the user choose the favourite genre. */
+  async _askGenre() {
+    if (this.genres.length === 0) {
+      console.error('Error: No genres to choose from.')
+      return;
+    }
+
+    const questions = [
+      {
+        type   : 'select',
+        name   : 'genre',
+        message: 'Please choose your favourite book genre',
+        choices: this.genres,
+        initial: 0
+      }
+    ];
+
+    const response = await prompts(questions);
+
+    this.selectedGenreUrl = response.genre;
+
+    this._randomBook(this.selectedGenreUrl);
+  }
+
+  /** Fetch a random book.
+   * @param {string} url - The URL to fetch from.
+   * */
+  async _randomBook(url) {
+    if (!url && !this.selectedGenreUrl) {
+      console.error('Error: Cannot choose a book.')
+      return;
+    }
+
+    console.log(`> Choosing a book from ${url}...`)
+
+    const browser = await playwright.chromium.launch({
+      headless: true,
+    });
+
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url);
+    } catch (e) {
+      if (e instanceof playwright.errors.TimeoutError) {
+      }
+      console.error(`Error: ${e}`)
+      await browser.close();
+      return;
+    }
+
+    this.books = await page.$$eval(
+      "div.inlineblock.pollAnswer.resultShown",
+      (allBooks) => {
+        const data = [];
+        allBooks.forEach((book) => {
+          const name = book.querySelector("img").alt;
+          data.push(name);
+        });
+        return data;
+      }
+    );
+
+    this.randomBookIndex = Math.floor(Math.random() * this.books.length);
+    console.log(`I think you will enjoy this book: ${this.books[this.randomBookIndex]}`);
+
+    await browser.close();
+
+    this._addBookToAmazonCart(this.books[this.randomBookIndex]);
+  }
+
+  /** Searches for the book in amazon and add it to the cart.
+   * @param {string} book - The name of the book and its author.
+   * */
+  async _addBookToAmazonCart(book) {
+    const browser = await playwright.chromium.launch({
+      headless: false,
+    });
+
+    const page = await browser.newPage();
+    try {
+      await page.goto("https://amazon.com/");
+    } catch (e) {
+      if (e instanceof playwright.errors.TimeoutError) {
+      }
+      console.error(`Error: ${e}`)
+      await browser.close();
+      return;
+    }
+    await page.locator('#searchDropdownBox').selectOption({label: 'Books'});
+    //await page.waitForTimeout(1000);
+    await page.locator('#twotabsearchtextbox').fill(book);
+    await page.locator('#nav-search-submit-button').click();
+    await page.locator('[data-component-type="s-product-image"] a').first().click();
+    try {
+      await page.locator('#add-to-cart-button').click();
+    } catch (e) {
+      if (e instanceof playwright.errors.TimeoutError) {
+        console.error(`It's not possible to add the book to the cart, let's try with another book`)
+        await browser.close();
+        this._randomBook(this.selectedGenreUrl);
+        return;
+      }
+      await browser.close();
+      return;
+    }
+    await page.locator('[name="proceedToRetailCheckout"]').click();
+
+    console.log('Now you can proceed to checkout.')
+  }
+}
+
+new BuyABook();
