@@ -25,8 +25,6 @@ class BuyABook {
     try {
       await page.goto("https://www.goodreads.com/choiceawards/best-books-2020");
     } catch (e) {
-      if (e instanceof playwright.errors.TimeoutError) {
-      }
       console.error(`Error: ${e}`)
       await browser.close();
       return;
@@ -91,8 +89,6 @@ class BuyABook {
     try {
       await page.goto(url);
     } catch (e) {
-      if (e instanceof playwright.errors.TimeoutError) {
-      }
       console.error(`Error: ${e}`)
       await browser.close();
       return;
@@ -130,8 +126,6 @@ class BuyABook {
     try {
       await page.goto("https://amazon.com/");
     } catch (e) {
-      if (e instanceof playwright.errors.TimeoutError) {
-      }
       console.error(`Error: ${e}`)
       await browser.close();
       return;
